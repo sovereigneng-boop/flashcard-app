@@ -113,25 +113,28 @@ export default function GlobalDailyReview() {
   const [phase, setPhase] = useState<Phase | null>(null)
 
   useEffect(() => {
-    const draft = getSessionDraft(GLOBAL_SET_ID, MODE)
-    if (draft) {
-      setPhase({
-        phase: 'quiz',
-        initialQueue: draft.queue,
-        initialCorrectCount: draft.correctCount,
-        initialWrongCount: draft.wrongCount,
-        initialAnsweredCount: draft.answeredCount,
-        initialPendingUpdates: draft.pendingUpdates,
-      })
-      return
-    }
+    async function init() {
+      const draft = getSessionDraft(GLOBAL_SET_ID, MODE)
+      if (draft) {
+        setPhase({
+          phase: 'quiz',
+          initialQueue: draft.queue,
+          initialCorrectCount: draft.correctCount,
+          initialWrongCount: draft.wrongCount,
+          initialAnsweredCount: draft.answeredCount,
+          initialPendingUpdates: draft.pendingUpdates,
+        })
+        return
+      }
 
-    const cards = getAllDailyReviewCards()
-    if (cards.length === 0) {
-      router.replace('/')
-      return
+      const cards = await getAllDailyReviewCards()
+      if (cards.length === 0) {
+        router.replace('/')
+        return
+      }
+      setPhase({ phase: 'order', cards })
     }
-    setPhase({ phase: 'order', cards })
+    init()
   }, [router])
 
   function handleOrderSelect(order: 'sequential' | 'random') {
@@ -157,12 +160,12 @@ export default function GlobalDailyReview() {
     router.replace('/')
   }
 
-  function handleContinueWithWrong(updates: PendingUpdate[]) {
+  async function handleContinueWithWrong(updates: PendingUpdate[]) {
     const wrongCardIds = new Set(updates.filter((u) => !u.correct).map((u) => u.cardId))
-    commitSessionUpdates(updates, MODE)
+    await commitSessionUpdates(updates, MODE)
     clearSessionDraft(GLOBAL_SET_ID, MODE)
 
-    const wrongCards = getCardsByIds([...wrongCardIds])
+    const wrongCards = await getCardsByIds([...wrongCardIds])
     if (wrongCards.length === 0) {
       router.replace('/')
     } else {

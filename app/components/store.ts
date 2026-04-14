@@ -1,3 +1,4 @@
+import { supabase } from '../lib/supabase'
 import type {
   Card,
   CardSet,
@@ -7,9 +8,6 @@ import type {
   QuizMode,
   SessionDraft,
 } from './types'
-
-const KEY = 'flashcards-v2'
-const DRAFTS_KEY = 'flashcards-drafts-v1'
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 
@@ -34,181 +32,228 @@ function timestampToDateString(ts: number): string {
   return formatDate(new Date(ts))
 }
 
-/** Days to wait after passing each stage before the next review. */
 const REVIEW_INTERVALS: Record<number, number> = { 1: 1, 2: 3, 3: 7, 4: 14, 5: 30 }
 
-// ── Main data storage ─────────────────────────────────────────────────────────
+// ── Row → Type mappers ────────────────────────────────────────────────────────
 
-interface Data {
-  projects: Project[]
-  sets: CardSet[]
-  cards: Card[]
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rowToProject(row: any): Project {
+  return { id: row.id, name: row.name, createdAt: row.created_at }
 }
 
-function load(): Data {
-  if (typeof window === 'undefined') return { projects: [], sets: [], cards: [] }
-  try {
-    const raw = localStorage.getItem(KEY)
-    if (raw) {
-      const parsed = JSON.parse(raw) as Data
-      parsed.cards = (parsed.cards ?? []).map((c) => {
-        const raw = c as unknown as Record<string, unknown>
-        return {
-          id: raw.id as string,
-          setId: raw.setId as string,
-          front: (raw.front as string) ?? '',
-          back: (raw.back as string) ?? '',
-          order: (raw.order as number) ?? 0,
-          createdAt: (raw.createdAt as number) ?? Date.now(),
-          reviewStage: (raw.reviewStage as number) ?? 1,
-          nextReviewDate: (raw.nextReviewDate as string) ?? todayString(),
-          history: (raw.history as HistoryEntry[]) ?? [],
-        }
-      })
-      return parsed
-    }
-  } catch {}
-  return { projects: [], sets: [], cards: [] }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rowToSet(row: any): CardSet {
+  return { id: row.id, projectId: row.project_id, name: row.name, createdAt: row.created_at }
 }
 
-function save(data: Data): void {
-  localStorage.setItem(KEY, JSON.stringify(data))
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rowToCard(row: any): Card {
+  return {
+    id: row.id,
+    setId: row.set_id,
+    front: row.front ?? '',
+    back: row.back ?? '',
+    order: row.order ?? 0,
+    createdAt: row.created_at ?? Date.now(),
+    reviewStage: row.review_stage ?? 1,
+    nextReviewDate: row.next_review_date ?? todayString(),
+    history: (row.history as HistoryEntry[]) ?? [],
+  }
 }
 
 // ── Projects ──────────────────────────────────────────────────────────────────
 
-export function getProjects(): Project[] {
-  return load().projects.sort((a, b) => b.createdAt - a.createdAt)
+export async function getProjects(): Promise<Project[]> {
+  const { data } = await supabase
+    .from('projects')
+    .select('*')
+    .order('created_at', { ascending: false })
+  return (data ?? []).map(rowToProject)
 }
 
-export function getProject(id: string): Project | undefined {
-  return load().projects.find((p) => p.id === id)
+export async function getProject(id: string): Promise<Project | undefined> {
+  const { data } = await supabase
+    .from('projects')
+    .select('*')
+    .eq('id', id)
+    .single()
+  return data ? rowToProject(data) : undefined
 }
 
-export function createProject(name: string): Project {
-  const data = load()
-  const project: Project = { id: crypto.randomUUID(), name, createdAt: Date.now() }
-  data.projects.push(project)
-  save(data)
-  return project
+export async function createProject(name: string): Promise<Project> {
+  const project = { id: crypto.randomUUID(), name, created_at: Date.now() }
+  await supabase.from('projects').insert(project)
+  return rowToProject(project)
 }
 
-export function updateProject(id: string, name: string): void {
-  const data = load()
-  data.projects = data.projects.map((p) => (p.id === id ? { ...p, name } : p))
-  save(data)
+export async function updateProject(id: string, name: string): Promise<void> {
+  await supabase.from('projects').update({ name }).eq('id', id)
 }
 
-export function deleteProject(id: string): void {
-  const data = load()
-  const setIds = new Set(data.sets.filter((s) => s.projectId === id).map((s) => s.id))
-  data.projects = data.projects.filter((p) => p.id !== id)
-  data.sets = data.sets.filter((s) => s.projectId !== id)
-  data.cards = data.cards.filter((c) => !setIds.has(c.setId))
-  save(data)
+export async function deleteProject(id: string): Promise<void> {
+  // CASCADE handles sets and cards deletion in DB
+  await supabase.from('projects').delete().eq('id', id)
 }
 
 // ── Sets ──────────────────────────────────────────────────────────────────────
 
-export function getSets(projectId: string): CardSet[] {
-  return load().sets
-    .filter((s) => s.projectId === projectId)
-    .sort((a, b) => b.createdAt - a.createdAt)
+export async function getSets(projectId: string): Promise<CardSet[]> {
+  const { data } = await supabase
+    .from('sets')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('created_at', { ascending: false })
+  return (data ?? []).map(rowToSet)
 }
 
-export function getSet(id: string): CardSet | undefined {
-  return load().sets.find((s) => s.id === id)
+export async function getSet(id: string): Promise<CardSet | undefined> {
+  const { data } = await supabase
+    .from('sets')
+    .select('*')
+    .eq('id', id)
+    .single()
+  return data ? rowToSet(data) : undefined
 }
 
-export function createSet(projectId: string, name: string): CardSet {
-  const data = load()
-  const set: CardSet = { id: crypto.randomUUID(), projectId, name, createdAt: Date.now() }
-  data.sets.push(set)
-  save(data)
-  return set
+export async function createSet(projectId: string, name: string): Promise<CardSet> {
+  const set = { id: crypto.randomUUID(), project_id: projectId, name, created_at: Date.now() }
+  await supabase.from('sets').insert(set)
+  return rowToSet(set)
 }
 
-export function updateSet(id: string, name: string): void {
-  const data = load()
-  data.sets = data.sets.map((s) => (s.id === id ? { ...s, name } : s))
-  save(data)
+export async function updateSet(id: string, name: string): Promise<void> {
+  await supabase.from('sets').update({ name }).eq('id', id)
 }
 
-export function deleteSet(id: string): void {
-  const data = load()
-  data.sets = data.sets.filter((s) => s.id !== id)
-  data.cards = data.cards.filter((c) => c.setId !== id)
-  save(data)
+export async function deleteSet(id: string): Promise<void> {
+  // CASCADE handles cards deletion in DB
+  await supabase.from('sets').delete().eq('id', id)
 }
 
-export function countCards(setId: string): number {
-  return load().cards.filter((c) => c.setId === setId).length
+export async function countCards(setId: string): Promise<number> {
+  const { count } = await supabase
+    .from('cards')
+    .select('*', { count: 'exact', head: true })
+    .eq('set_id', setId)
+  return count ?? 0
 }
 
 // ── Cards ─────────────────────────────────────────────────────────────────────
 
-export function getCards(setId: string): Card[] {
-  return load().cards.filter((c) => c.setId === setId).sort((a, b) => a.order - b.order)
+export async function getCards(setId: string): Promise<Card[]> {
+  const { data } = await supabase
+    .from('cards')
+    .select('*')
+    .eq('set_id', setId)
+    .order('order', { ascending: true })
+  return (data ?? []).map(rowToCard)
 }
 
-export function saveCards(setId: string, rows: { id?: string; front: string; back: string }[]): void {
-  const data = load()
-  const existing = new Map(data.cards.filter((c) => c.setId === setId).map((c) => [c.id, c]))
-  data.cards = data.cards.filter((c) => c.setId !== setId)
+export async function saveCards(
+  setId: string,
+  rows: { id?: string; front: string; back: string }[]
+): Promise<void> {
+  const existing = await getCards(setId)
+  const existingMap = new Map(existing.map((c) => [c.id, c]))
 
-  const newCards: Card[] = rows
-    .filter((r) => r.front.trim() || r.back.trim())
-    .map((r, i) => {
-      if (r.id && existing.has(r.id)) {
-        const orig = existing.get(r.id)!
-        return { ...orig, front: r.front.trim(), back: r.back.trim(), order: i }
-      }
+  const filtered = rows.filter((r) => r.front.trim() || r.back.trim())
+  const incomingIds = new Set(filtered.filter((r) => r.id).map((r) => r.id!))
+  const toDelete = existing.filter((c) => !incomingIds.has(c.id)).map((c) => c.id)
+
+  // Build upsert rows
+  const upserts = filtered.map((row, i) => {
+    if (row.id && existingMap.has(row.id)) {
+      const orig = existingMap.get(row.id)!
       return {
-        id: crypto.randomUUID(),
-        setId,
-        front: r.front.trim(),
-        back: r.back.trim(),
+        id: orig.id,
+        set_id: setId,
+        front: row.front.trim(),
+        back: row.back.trim(),
         order: i,
-        createdAt: Date.now(),
-        reviewStage: 1,
-        nextReviewDate: addDaysToToday(1),
-        history: [],
+        created_at: orig.createdAt,
+        review_stage: orig.reviewStage,
+        next_review_date: orig.nextReviewDate,
+        history: orig.history,
       }
-    })
+    }
+    return {
+      id: crypto.randomUUID(),
+      set_id: setId,
+      front: row.front.trim(),
+      back: row.back.trim(),
+      order: i,
+      created_at: Date.now(),
+      review_stage: 1,
+      next_review_date: addDaysToToday(1),
+      history: [],
+    }
+  })
 
-  data.cards.push(...newCards)
-  save(data)
+  await Promise.all([
+    upserts.length > 0
+      ? supabase.from('cards').upsert(upserts, { onConflict: 'id' })
+      : Promise.resolve(),
+    toDelete.length > 0
+      ? supabase.from('cards').delete().in('id', toDelete)
+      : Promise.resolve(),
+  ])
 }
 
 // ── Quiz queries ──────────────────────────────────────────────────────────────
 
-export function getDailyQuizCards(setId: string): Card[] {
+export async function getDailyQuizCards(setId: string): Promise<Card[]> {
   const today = todayString()
-  return load().cards
-    .filter((c) => c.setId === setId && timestampToDateString(c.createdAt) === today)
-    .sort((a, b) => a.order - b.order)
+  // createdAt is stored as ms timestamp; compare date portion
+  const startOfToday = new Date()
+  startOfToday.setHours(0, 0, 0, 0)
+  const endOfToday = new Date()
+  endOfToday.setHours(23, 59, 59, 999)
+
+  const { data } = await supabase
+    .from('cards')
+    .select('*')
+    .eq('set_id', setId)
+    .gte('created_at', startOfToday.getTime())
+    .lte('created_at', endOfToday.getTime())
+    .order('order', { ascending: true })
+  return (data ?? []).map(rowToCard)
 }
 
-export function getDailyReviewCards(setId: string): Card[] {
+export async function getDailyReviewCards(setId: string): Promise<Card[]> {
   const today = todayString()
-  return load().cards
-    .filter((c) => c.setId === setId && c.reviewStage < 6 && c.nextReviewDate <= today)
-    .sort((a, b) => a.order - b.order)
+  const { data } = await supabase
+    .from('cards')
+    .select('*')
+    .eq('set_id', setId)
+    .lt('review_stage', 6)
+    .lte('next_review_date', today)
+    .order('order', { ascending: true })
+  return (data ?? []).map(rowToCard)
 }
 
-export function getAllDailyReviewCards(): Card[] {
+export async function getAllDailyReviewCards(): Promise<Card[]> {
   const today = todayString()
-  return load().cards
-    .filter((c) => c.reviewStage < 6 && c.nextReviewDate <= today)
-    .sort((a, b) => a.order - b.order)
+  const { data } = await supabase
+    .from('cards')
+    .select('*')
+    .lt('review_stage', 6)
+    .lte('next_review_date', today)
+    .order('order', { ascending: true })
+  return (data ?? []).map(rowToCard)
 }
 
-export function getCardsByIds(ids: string[]): Card[] {
-  const idSet = new Set(ids)
-  return load().cards.filter((c) => idSet.has(c.id))
+export async function getCardsByIds(ids: string[]): Promise<Card[]> {
+  if (ids.length === 0) return []
+  const { data } = await supabase
+    .from('cards')
+    .select('*')
+    .in('id', ids)
+  return (data ?? []).map(rowToCard)
 }
 
-// ── Session drafts ────────────────────────────────────────────────────────────
+// ── Session drafts (localStorage — session-only, no sync needed) ──────────────
+
+const DRAFTS_KEY = 'flashcards-drafts-v1'
 
 function loadDrafts(): Record<string, SessionDraft> {
   if (typeof window === 'undefined') return {}
@@ -247,38 +292,52 @@ export function clearSessionDraft(setId: string, mode: QuizMode): void {
 
 export type ReviewMode = 'daily-review' | 'total-test'
 
-/**
- * Apply all buffered O/X answers to the store at once.
- * Called only when a session is fully completed or mid-saved and then resumed+completed.
- * For daily-quiz, updates are never committed (session-only).
- */
-export function commitSessionUpdates(updates: PendingUpdate[], mode: ReviewMode): void {
+export async function commitSessionUpdates(
+  updates: PendingUpdate[],
+  mode: ReviewMode
+): Promise<void> {
   if (updates.length === 0) return
-  const data = load()
   const today = todayString()
 
-  for (const { cardId, correct } of updates) {
-    const idx = data.cards.findIndex((c) => c.id === cardId)
-    if (idx === -1) continue
-    const c = data.cards[idx]
-    const entry: HistoryEntry = { date: today, correct }
-    const newHistory = [...c.history, entry]
+  const cardIds = updates.map((u) => u.cardId)
+  const { data: rows } = await supabase
+    .from('cards')
+    .select('id, review_stage, history')
+    .in('id', cardIds)
+  if (!rows) return
 
-    if (mode === 'total-test') {
-      data.cards[idx] = { ...c, history: newHistory }
-    } else {
-      // daily-review
-      if (correct) {
-        const newStage = Math.min(c.reviewStage + 1, 6)
-        const intervalDays = REVIEW_INTERVALS[c.reviewStage]
-        const nextDate = newStage >= 6 ? '9999-12-31' : addDaysToToday(intervalDays ?? 30)
-        data.cards[idx] = { ...c, reviewStage: newStage, nextReviewDate: nextDate, history: newHistory }
+  const rowMap = new Map(rows.map((r) => [r.id, r]))
+
+  await Promise.all(
+    updates.map(({ cardId, correct }) => {
+      const r = rowMap.get(cardId)
+      if (!r) return Promise.resolve()
+
+      const entry: HistoryEntry = { date: today, correct }
+      const newHistory = [...((r.history as HistoryEntry[]) ?? []), entry]
+
+      if (mode === 'total-test') {
+        return supabase
+          .from('cards')
+          .update({ history: newHistory })
+          .eq('id', cardId)
       } else {
-        const newStage = Math.max(c.reviewStage - 1, 1)
-        data.cards[idx] = { ...c, reviewStage: newStage, nextReviewDate: addDaysToToday(1), history: newHistory }
+        if (correct) {
+          const newStage = Math.min(r.review_stage + 1, 6)
+          const intervalDays = REVIEW_INTERVALS[r.review_stage]
+          const nextDate = newStage >= 6 ? '9999-12-31' : addDaysToToday(intervalDays ?? 30)
+          return supabase
+            .from('cards')
+            .update({ review_stage: newStage, next_review_date: nextDate, history: newHistory })
+            .eq('id', cardId)
+        } else {
+          const newStage = Math.max(r.review_stage - 1, 1)
+          return supabase
+            .from('cards')
+            .update({ review_stage: newStage, next_review_date: addDaysToToday(1), history: newHistory })
+            .eq('id', cardId)
+        }
       }
-    }
-  }
-
-  save(data)
+    })
+  )
 }

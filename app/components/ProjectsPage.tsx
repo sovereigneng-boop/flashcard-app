@@ -28,34 +28,36 @@ export default function ProjectsPage() {
   const [globalReviewCount, setGlobalReviewCount] = useState(0)
   const [globalHasDraft, setGlobalHasDraft] = useState(false)
 
-  function load() {
-    const ps = getProjects()
+  async function load() {
+    const ps = await getProjects()
     setProjects(ps)
     const c: Record<string, number> = {}
-    ps.forEach((p) => { c[p.id] = getSets(p.id).length })
+    const setGroups = await Promise.all(ps.map((p) => getSets(p.id)))
+    ps.forEach((p, i) => { c[p.id] = setGroups[i].length })
     setCounts(c)
-    setGlobalReviewCount(getAllDailyReviewCards().length)
+    const reviewCards = await getAllDailyReviewCards()
+    setGlobalReviewCount(reviewCards.length)
     setGlobalHasDraft(!!getSessionDraft(GLOBAL_SET_ID, 'daily-review'))
   }
 
   useEffect(() => { load() }, [])
 
-  function handleAdd(name: string) {
-    createProject(name)
+  async function handleAdd(name: string) {
+    await createProject(name)
     setModal({ type: 'closed' })
     load()
   }
 
-  function handleEdit(name: string) {
+  async function handleEdit(name: string) {
     if (modal.type !== 'edit') return
-    updateProject(modal.project.id, name)
+    await updateProject(modal.project.id, name)
     setModal({ type: 'closed' })
     load()
   }
 
-  function handleDelete(id: string) {
+  async function handleDelete(id: string) {
     if (!confirm('이 프로젝트와 모든 세트·카드가 삭제됩니다. 계속하시겠어요?')) return
-    deleteProject(id)
+    await deleteProject(id)
     load()
   }
 

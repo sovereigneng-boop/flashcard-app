@@ -19,19 +19,21 @@ export default function EditPage() {
   const tableRef = useRef<CardTableHandle>(null)
 
   useEffect(() => {
-    const p = getProject(projectId)
-    const s = getSet(setId)
-    if (!p || !s) { router.replace('/'); return }
-    setProject(p)
-    setSet(s)
-    setInitialCards(getCards(setId))
+    async function load() {
+      const [p, s] = await Promise.all([getProject(projectId), getSet(setId)])
+      if (!p || !s) { router.replace('/'); return }
+      setProject(p)
+      setSet(s)
+      setInitialCards(await getCards(setId))
+    }
+    load()
   }, [projectId, setId])
 
-  function handleSave() {
+  async function handleSave() {
     if (!tableRef.current) return
     setSaving(true)
     const rows = tableRef.current.getRows()
-    saveCards(setId, rows)
+    await saveCards(setId, rows)
     router.push(`/projects/${projectId}/sets/${setId}`)
   }
 

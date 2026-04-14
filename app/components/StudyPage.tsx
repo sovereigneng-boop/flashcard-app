@@ -194,15 +194,19 @@ export default function StudyPage() {
   const [drafts, setDrafts] = useState<Partial<Record<QuizMode, boolean>>>({})
   const [phase, setPhase] = useState<PagePhase>({ phase: 'mode' })
 
-  const loadData = useCallback(() => {
-    const p = getProject(projectId)
-    const s = getSet(setId)
+  const loadData = useCallback(async () => {
+    const [p, s] = await Promise.all([getProject(projectId), getSet(setId)])
     if (!p || !s) { router.replace('/'); return }
     setProject(p)
     setSet(s)
-    setDailyQuizCards(getDailyQuizCards(setId))
-    setDailyReviewCards(getDailyReviewCards(setId))
-    setAllCards(getCards(setId))
+    const [quiz, review, all] = await Promise.all([
+      getDailyQuizCards(setId),
+      getDailyReviewCards(setId),
+      getCards(setId),
+    ])
+    setDailyQuizCards(quiz)
+    setDailyReviewCards(review)
+    setAllCards(all)
     setDrafts({
       'daily-quiz': !!getSessionDraft(setId, 'daily-quiz'),
       'daily-review': !!getSessionDraft(setId, 'daily-review'),
@@ -214,7 +218,7 @@ export default function StudyPage() {
 
   // ── Mode selection ─────────────────────────────────────────────────────────
 
-  function handleModeSelect(mode: QuizMode) {
+  async function handleModeSelect(mode: QuizMode) {
     // Check for a saved draft first
     const draft = getSessionDraft(setId, mode)
     if (draft) {
@@ -232,9 +236,9 @@ export default function StudyPage() {
 
     // Fresh start: gather cards then go to order selection
     let cards: Card[]
-    if (mode === 'daily-quiz') cards = getDailyQuizCards(setId)
-    else if (mode === 'daily-review') cards = getDailyReviewCards(setId)
-    else cards = getCards(setId)
+    if (mode === 'daily-quiz') cards = await getDailyQuizCards(setId)
+    else if (mode === 'daily-review') cards = await getDailyReviewCards(setId)
+    else cards = await getCards(setId)
     if (cards.length === 0) return
     setPhase({ phase: 'order', mode, cards })
   }
@@ -269,7 +273,7 @@ export default function StudyPage() {
     setPhase({ phase: 'mode' })
   }
 
-  function handleContinueWithWrong(updates: PendingUpdate[]) {
+  async function handleContinueWithWrong(updates: PendingUpdate[]) {
     if (phase.phase !== 'quiz') return
     const mode = phase.mode
 
@@ -277,13 +281,13 @@ export default function StudyPage() {
     const wrongCardIds = new Set(updates.filter((u) => !u.correct).map((u) => u.cardId))
 
     if (mode !== 'daily-quiz') {
-      commitSessionUpdates(updates, mode)
+      await commitSessionUpdates(updates, mode)
     }
     clearSessionDraft(setId, mode)
 
     // Look up the wrong Card objects by ID from the (now-updated) store
-    const allCards = getCards(setId)
-    const wrongCards = allCards.filter((c) => wrongCardIds.has(c.id))
+    const updatedCards = await getCards(setId)
+    const wrongCards = updatedCards.filter((c) => wrongCardIds.has(c.id))
 
     loadData()
 

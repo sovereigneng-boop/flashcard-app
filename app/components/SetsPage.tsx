@@ -28,35 +28,36 @@ export default function SetsPage() {
   const [cardCounts, setCardCounts] = useState<Record<string, number>>({})
   const [modal, setModal] = useState<ModalState>({ type: 'closed' })
 
-  function load() {
-    const p = getProject(projectId)
+  async function load() {
+    const p = await getProject(projectId)
     if (!p) { router.replace('/'); return }
     setProject(p)
-    const ss = getSets(projectId)
+    const ss = await getSets(projectId)
     setSets(ss)
+    const counts = await Promise.all(ss.map((s) => countCards(s.id)))
     const cc: Record<string, number> = {}
-    ss.forEach((s) => { cc[s.id] = countCards(s.id) })
+    ss.forEach((s, i) => { cc[s.id] = counts[i] })
     setCardCounts(cc)
   }
 
   useEffect(() => { load() }, [projectId])
 
-  function handleAdd(name: string) {
-    createSet(projectId, name)
+  async function handleAdd(name: string) {
+    await createSet(projectId, name)
     setModal({ type: 'closed' })
     load()
   }
 
-  function handleEdit(name: string) {
+  async function handleEdit(name: string) {
     if (modal.type !== 'edit') return
-    updateSet(modal.set.id, name)
+    await updateSet(modal.set.id, name)
     setModal({ type: 'closed' })
     load()
   }
 
-  function handleDelete(id: string) {
+  async function handleDelete(id: string) {
     if (!confirm('이 세트와 모든 카드가 삭제됩니다. 계속하시겠어요?')) return
-    deleteSet(id)
+    await deleteSet(id)
     load()
   }
 

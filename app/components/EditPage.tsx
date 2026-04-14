@@ -13,7 +13,7 @@ export default function EditPage() {
 
   const [project, setProject] = useState<Project | null>(null)
   const [set, setSet] = useState<CardSet | null>(null)
-  const [initialCards, setInitialCards] = useState<Card[]>([])
+  const [initialCards, setInitialCards] = useState<Card[] | null>(null)
   const [saving, setSaving] = useState(false)
 
   const tableRef = useRef<CardTableHandle>(null)
@@ -37,7 +37,10 @@ export default function EditPage() {
     router.push(`/projects/${projectId}/sets/${setId}`)
   }
 
-  if (!project || !set) return null
+  // Wait until cards are loaded before rendering CardTable.
+  // CardTable's useState initializer runs only once, so we must not
+  // render it until initialCards is ready.
+  if (!project || !set || initialCards === null) return null
 
   return (
     <div className="min-h-screen bg-zinc-50 px-4 py-12">

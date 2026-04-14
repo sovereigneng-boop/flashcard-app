@@ -215,7 +215,7 @@ export default function CardTable({ initialRows = [], ref }: CardTableProps) {
             <div className="flex items-center justify-center pt-2">
               <button
                 onClick={() => deleteRow(i)}
-                className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded-lg text-zinc-300 hover:text-red-500 hover:bg-red-50 transition-all text-lg leading-none"
+                className="opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto w-6 h-6 flex items-center justify-center rounded-lg text-zinc-300 hover:text-red-500 hover:bg-red-50 transition-all text-lg leading-none"
                 aria-label={`${i + 1}번 행 삭제`}
               >
                 ×

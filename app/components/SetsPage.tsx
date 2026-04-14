@@ -126,7 +126,7 @@ export default function SetsPage() {
                 </Link>
 
                 {/* Actions */}
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity">
                   <Link
                     href={`/projects/${projectId}/sets/${set.id}/edit`}
                     className="px-3 py-1.5 text-xs font-medium text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors"

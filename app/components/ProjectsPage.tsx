@@ -158,7 +158,7 @@ export default function ProjectsPage() {
                 </Link>
 
                 {/* Actions */}
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity">
                   <button
                     onClick={() => setModal({ type: 'edit', project })}
                     className="px-3 py-1.5 text-xs font-medium text-zinc-500 rounded-lg hover:bg-zinc-100 transition-colors"

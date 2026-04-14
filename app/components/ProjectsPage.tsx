@@ -5,12 +5,16 @@ import { useEffect, useState } from 'react'
 import {
   createProject,
   deleteProject,
+  getAllDailyReviewCards,
   getProjects,
+  getSessionDraft,
   getSets,
   updateProject,
 } from './store'
 import type { Project } from './types'
 import NameModal from './NameModal'
+
+const GLOBAL_SET_ID = '__global__'
 
 type ModalState =
   | { type: 'closed' }
@@ -21,6 +25,8 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [counts, setCounts] = useState<Record<string, number>>({})
   const [modal, setModal] = useState<ModalState>({ type: 'closed' })
+  const [globalReviewCount, setGlobalReviewCount] = useState(0)
+  const [globalHasDraft, setGlobalHasDraft] = useState(false)
 
   function load() {
     const ps = getProjects()
@@ -28,6 +34,8 @@ export default function ProjectsPage() {
     const c: Record<string, number> = {}
     ps.forEach((p) => { c[p.id] = getSets(p.id).length })
     setCounts(c)
+    setGlobalReviewCount(getAllDailyReviewCards().length)
+    setGlobalHasDraft(!!getSessionDraft(GLOBAL_SET_ID, 'daily-review'))
   }
 
   useEffect(() => { load() }, [])
@@ -68,6 +76,47 @@ export default function ProjectsPage() {
             새 프로젝트
           </button>
         </div>
+
+        {/* Global daily review banner */}
+        <Link
+          href="/global-review"
+          className={`block w-full rounded-2xl border px-5 py-5 mb-6 transition-all
+            ${globalReviewCount === 0
+              ? 'bg-zinc-50 border-zinc-100 opacity-50 pointer-events-none'
+              : 'bg-indigo-600 border-indigo-700 hover:bg-indigo-500 shadow-md active:scale-[0.99]'
+            }`}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${globalReviewCount === 0 ? 'bg-zinc-100' : 'bg-indigo-500'}`}>
+                <svg className={`w-5 h-5 ${globalReviewCount === 0 ? 'text-zinc-400' : 'text-white'}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+              </div>
+              <div>
+                <p className={`font-bold text-base ${globalReviewCount === 0 ? 'text-zinc-500' : 'text-white'}`}>
+                  토탈 데일리 복습
+                </p>
+                <p className={`text-xs mt-0.5 ${globalReviewCount === 0 ? 'text-zinc-400' : 'text-indigo-200'}`}>
+                  {globalReviewCount === 0
+                    ? '오늘 복습할 카드가 없습니다'
+                    : '모든 세트의 복습 카드를 한번에 학습합니다'}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col items-end gap-1 shrink-0">
+              <span className={`text-2xl font-bold ${globalReviewCount === 0 ? 'text-zinc-300' : 'text-white'}`}>
+                {globalReviewCount}
+              </span>
+              <p className={`text-xs ${globalReviewCount === 0 ? 'text-zinc-400' : 'text-indigo-200'}`}>복습 예정</p>
+              {globalHasDraft && (
+                <span className="text-xs font-semibold text-indigo-600 bg-white px-2 py-0.5 rounded-full">
+                  이어하기
+                </span>
+              )}
+            </div>
+          </div>
+        </Link>
 
         {/* Empty state */}
         {projects.length === 0 && (

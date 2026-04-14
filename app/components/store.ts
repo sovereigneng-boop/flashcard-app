@@ -196,6 +196,18 @@ export function getDailyReviewCards(setId: string): Card[] {
     .sort((a, b) => a.order - b.order)
 }
 
+export function getAllDailyReviewCards(): Card[] {
+  const today = todayString()
+  return load().cards
+    .filter((c) => c.reviewStage < 6 && c.nextReviewDate <= today)
+    .sort((a, b) => a.order - b.order)
+}
+
+export function getCardsByIds(ids: string[]): Card[] {
+  const idSet = new Set(ids)
+  return load().cards.filter((c) => idSet.has(c.id))
+}
+
 // ── Session drafts ────────────────────────────────────────────────────────────
 
 function loadDrafts(): Record<string, SessionDraft> {

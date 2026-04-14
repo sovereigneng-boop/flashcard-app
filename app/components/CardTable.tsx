@@ -50,7 +50,7 @@ function AutoTextarea({
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
-    el.style.height = '0'
+    el.style.height = 'auto'
     el.style.height = el.scrollHeight + 'px'
   }, [value])
 
@@ -65,7 +65,7 @@ function AutoTextarea({
       onChange={(e) => onChange(e.target.value)}
       onKeyDown={onKeyDown}
       onPaste={onPaste}
-      className="w-full resize-none overflow-hidden rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 placeholder-zinc-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition leading-relaxed"
+      className="w-full resize-none overflow-hidden rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 placeholder-zinc-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition leading-relaxed min-h-[2.375rem]"
     />
   )
 }

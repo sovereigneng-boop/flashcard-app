@@ -130,7 +130,7 @@ export default function SetsPage() {
                     href={`/projects/${projectId}/sets/${set.id}/edit`}
                     className="px-3 py-1.5 text-xs font-medium text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors"
                   >
-                    편집
+                    카드 추가/수정
                   </Link>
                   <button
                     onClick={() => setModal({ type: 'edit', set })}

@@ -62,6 +62,7 @@ function ModeCard({
   icon,
   disabled,
   hasDraft,
+  disabledText = '해당하는 카드가 없습니다',
   onClick,
 }: {
   title: string
@@ -72,6 +73,7 @@ function ModeCard({
   icon: React.ReactNode
   disabled: boolean
   hasDraft: boolean
+  disabledText?: string
   onClick: () => void
 }) {
   return (
@@ -105,7 +107,7 @@ function ModeCard({
         <p className="text-sm text-zinc-400 mt-0.5 leading-relaxed">{description}</p>
       </div>
       {disabled && count === 0 && (
-        <p className="mt-3 text-xs text-zinc-400 font-medium">해당하는 카드가 없습니다</p>
+        <p className="mt-3 text-xs text-zinc-400 font-medium">{disabledText}</p>
       )}
     </button>
   )
@@ -373,7 +375,7 @@ export default function StudyPage() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
             </svg>
-            편집
+            카드 추가/수정
           </Link>
         </div>
 
@@ -386,6 +388,7 @@ export default function StudyPage() {
             accentColor="bg-amber-50 text-amber-500"
             disabled={dailyQuizCards.length === 0}
             hasDraft={!!drafts['daily-quiz']}
+            disabledText="오늘 추가된 카드가 없습니다"
             onClick={() => handleModeSelect('daily-quiz')}
             icon={
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">

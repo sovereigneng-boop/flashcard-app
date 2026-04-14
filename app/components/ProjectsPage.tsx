@@ -125,6 +125,72 @@ export default function ProjectsPage() {
             ))}
           </ul>
         )}
+
+        {/* Manual */}
+        <div className="mt-12 bg-white rounded-2xl border border-zinc-100 shadow-sm px-6 py-7">
+          <h2 className="text-base font-bold text-zinc-900 mb-1">카플래시 사용 매뉴얼</h2>
+          <p className="text-sm text-zinc-500 mb-6">카플래시는 간격 반복(Spaced Repetition) 학습법을 기반으로, 외운 내용을 장기 기억으로 만들어줍니다.</p>
+
+          {/* 학습 모드 */}
+          <h3 className="text-sm font-semibold text-zinc-700 mb-3">3가지 학습 모드</h3>
+          <div className="flex flex-col gap-3 mb-7">
+            <div className="rounded-xl bg-amber-50 px-4 py-3.5">
+              <p className="text-sm font-semibold text-amber-700 mb-0.5">데일리 퀴즈</p>
+              <p className="text-xs text-amber-600 leading-relaxed">오늘 새로 추가한 카드를 반복 확인하는 모드입니다. 모든 카드를 맞출 때까지 진행하며, 복습 회차에는 영향을 주지 않습니다.</p>
+            </div>
+            <div className="rounded-xl bg-indigo-50 px-4 py-3.5">
+              <p className="text-sm font-semibold text-indigo-700 mb-0.5">데일리 복습</p>
+              <p className="text-xs text-indigo-600 leading-relaxed">가장 중요한 모드입니다. 복습 주기에 맞는 카드가 자동으로 출제됩니다. 맞추면 다음 회차로 넘어가고, 틀리면 회차가 1단계 내려간 뒤 다음날 다시 출제됩니다.</p>
+            </div>
+            <div className="rounded-xl bg-zinc-50 px-4 py-3.5">
+              <p className="text-sm font-semibold text-zinc-700 mb-0.5">토탈 테스트</p>
+              <p className="text-xs text-zinc-500 leading-relaxed">세트 내 모든 카드를 한번에 테스트합니다. 복습 주기와 무관하게 전체 점검용으로 활용하세요.</p>
+            </div>
+          </div>
+
+          {/* 복습 주기 표 */}
+          <h3 className="text-sm font-semibold text-zinc-700 mb-3">복습 주기</h3>
+          <table className="w-full text-sm mb-7 border-collapse">
+            <thead>
+              <tr className="bg-zinc-50">
+                <th className="text-left text-xs font-semibold text-zinc-500 px-3 py-2 rounded-tl-lg border border-zinc-100">회차</th>
+                <th className="text-left text-xs font-semibold text-zinc-500 px-3 py-2 rounded-tr-lg border border-zinc-100">다음 복습까지</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { round: '1회차', interval: '1일 후' },
+                { round: '2회차', interval: '3일 후' },
+                { round: '3회차', interval: '1주 후' },
+                { round: '4회차', interval: '2주 후' },
+                { round: '5회차', interval: '1달 후' },
+                { round: '6회차', interval: '졸업 🎓' },
+              ].map(({ round, interval }) => (
+                <tr key={round} className="border-b border-zinc-100 last:border-0">
+                  <td className="px-3 py-2 text-xs font-medium text-zinc-700 border-x border-zinc-100">{round}</td>
+                  <td className="px-3 py-2 text-xs text-zinc-500 border-x border-zinc-100">{interval}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* 틀렸을 때 */}
+          <h3 className="text-sm font-semibold text-zinc-700 mb-2">틀렸을 때</h3>
+          <p className="text-xs text-zinc-500 leading-relaxed mb-3">회차가 1단계 감소하고, 다음날 다시 출제됩니다. 다음날 맞추면 회차가 다시 올라가고, 맞춘 날 기준으로 해당 회차의 주기가 새로 적용됩니다.</p>
+          <div className="rounded-xl bg-zinc-50 border border-zinc-100 px-4 py-3.5 mb-6">
+            <p className="text-xs font-semibold text-zinc-600 mb-1.5">예시) 4회차 복습에서 틀린 경우</p>
+            <ul className="text-xs text-zinc-500 leading-relaxed space-y-0.5">
+              <li>→ 회차가 3회차로 감소</li>
+              <li>→ 다음날 데일리 복습에 다시 출제</li>
+              <li>→ 다음날 맞추면 4회차로 복구</li>
+              <li>→ 맞춘 날 기준으로 2주 후에 다시 출제</li>
+            </ul>
+          </div>
+
+          {/* 건너뛴 경우 */}
+          <h3 className="text-sm font-semibold text-zinc-700 mb-2">복습을 건너뛴 경우</h3>
+          <p className="text-xs text-zinc-500 leading-relaxed">직접 맞추기 전까지는 다음 회차로 절대 넘어가지 않습니다. 며칠 쉬더라도 해당 카드는 데일리 복습에 계속 남아 있으니, 본인의 페이스에 맞춰 진행하세요.</p>
+        </div>
       </div>
 
       {modal.type === 'add' && (

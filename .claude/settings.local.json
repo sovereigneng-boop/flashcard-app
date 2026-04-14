@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "Bash(curl -s http://localhost:3000)",
+      "Bash(npx tsc:*)",
+      "Bash(curl:*)",
+      "Bash(echo \"exit: $?\")"
+    ]
+  }
+}

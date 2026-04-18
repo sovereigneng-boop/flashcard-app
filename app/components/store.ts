@@ -324,7 +324,7 @@ export async function commitSessionUpdates(
       } else {
         if (correct) {
           const newStage = Math.min(r.review_stage + 1, 6)
-          const intervalDays = REVIEW_INTERVALS[r.review_stage]
+          const intervalDays = REVIEW_INTERVALS[newStage]
           const nextDate = newStage >= 6 ? '9999-12-31' : addDaysToToday(intervalDays ?? 30)
           return supabase
             .from('cards')

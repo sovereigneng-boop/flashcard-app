@@ -136,7 +136,7 @@ function CompletionScreen({
             </button>
           )}
           <button
-            onClick={() => setShowEndConfirm(true)}
+            onClick={() => hasWrongCards ? setShowEndConfirm(true) : onDiscardAndExit()}
             className="w-full py-3 text-sm font-semibold text-zinc-600 bg-white border border-zinc-200 hover:bg-zinc-50 rounded-xl transition-colors"
           >
             테스트 종료

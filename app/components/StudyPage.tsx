@@ -39,6 +39,7 @@ const MODE_LABEL: Record<QuizMode, string> = {
 interface QuizPhaseState {
   phase: 'quiz'
   mode: QuizMode
+  isRetry: boolean
   initialQueue: Card[]
   initialCorrectCount: number
   initialWrongCount: number
@@ -48,7 +49,7 @@ interface QuizPhaseState {
 
 type PagePhase =
   | { phase: 'mode' }
-  | { phase: 'order'; mode: QuizMode; cards: Card[] }
+  | { phase: 'order'; mode: QuizMode; isRetry: boolean; cards: Card[] }
   | QuizPhaseState
 
 // ── ModeCard ──────────────────────────────────────────────────────────────────
@@ -225,6 +226,7 @@ export default function StudyPage() {
       setPhase({
         phase: 'quiz',
         mode,
+        isRetry: false,
         initialQueue: draft.queue,
         initialCorrectCount: draft.correctCount,
         initialWrongCount: draft.wrongCount,
@@ -240,7 +242,7 @@ export default function StudyPage() {
     else if (mode === 'daily-review') cards = await getDailyReviewCards(setId)
     else cards = await getCards(setId)
     if (cards.length === 0) return
-    setPhase({ phase: 'order', mode, cards })
+    setPhase({ phase: 'order', mode, isRetry: false, cards })
   }
 
   function handleOrderSelect(order: 'sequential' | 'random') {
@@ -249,6 +251,7 @@ export default function StudyPage() {
     setPhase({
       phase: 'quiz',
       mode: phase.mode,
+      isRetry: phase.isRetry,
       initialQueue: cards,
       initialCorrectCount: 0,
       initialWrongCount: 0,
@@ -276,11 +279,13 @@ export default function StudyPage() {
   async function handleContinueWithWrong(updates: PendingUpdate[]) {
     if (phase.phase !== 'quiz') return
     const mode = phase.mode
+    const isRetry = phase.isRetry
 
     // Collect wrong card IDs before committing (commit may change stages)
     const wrongCardIds = new Set(updates.filter((u) => !u.correct).map((u) => u.cardId))
 
-    if (mode !== 'daily-quiz') {
+    // Only commit on the first pass; retry passes are practice-only
+    if (!isRetry && mode !== 'daily-quiz') {
       await commitSessionUpdates(updates, mode)
     }
     clearSessionDraft(setId, mode)
@@ -294,7 +299,7 @@ export default function StudyPage() {
     if (wrongCards.length === 0) {
       setPhase({ phase: 'mode' })
     } else {
-      setPhase({ phase: 'order', mode, cards: wrongCards })
+      setPhase({ phase: 'order', mode, isRetry: true, cards: wrongCards })
     }
   }
 

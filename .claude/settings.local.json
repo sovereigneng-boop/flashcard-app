@@ -5,7 +5,9 @@
       "Bash(curl -s http://localhost:3000)",
       "Bash(npx tsc:*)",
       "Bash(curl:*)",
-      "Bash(echo \"exit: $?\")"
+      "Bash(echo \"exit: $?\")",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(node_modules/.bin/next build *)"
     ]
   }
 }
